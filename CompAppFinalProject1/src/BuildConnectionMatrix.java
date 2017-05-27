@@ -27,11 +27,11 @@ public class BuildConnectionMatrix{
 	
 ///////////////////////////////////////////////////////////////////////////////
 //        MAKE THE FINAL YBUS
-	public Complex[][] makeYbus(ArrayList<Terminal> Terminals, ArrayList<ConnectivityNode> Connections, ArrayList<Breaker> Breakers, ArrayList<ACLine> ACLines, ArrayList<PowerTransformerEnd> powerTransformerEnds) {
+	public Complex[][] makeYbus(ArrayList<Terminal> Terminals, ArrayList<ConnectivityNode> Connections, ArrayList<Breaker> Breakers, ArrayList<ACLine> ACLines, ArrayList<PowerTransformerEnd> powerTransformerEnds, ArrayList<BaseVoltage> BaseVoltage) {
 		//get the main nodes
 		ArrayList<Integer> mainNodes = findMainNodes(Connections); //find the main busbars of the system
 		ArrayList<List<Integer>> connOnes= makeConnOnes(Terminals,Connections,Breakers,ACLines,powerTransformerEnds);//how are all the connectivity nodes connected
-		Complex[][] connMatrix= makeConnMatrix(Terminals, Connections, Breakers, ACLines,powerTransformerEnds); //what are the impedances between connectivity nodes
+		Complex[][] connMatrix= makeConnMatrix(Terminals, Connections, Breakers, ACLines,powerTransformerEnds, BaseVoltage); //what are the impedances between connectivity nodes
 		ArrayList<List<Integer>> connOnesClone = connOnes;//make a copy of connOnes
 		ArrayList<Integer> paths= findAllPaths(connOnesClone,mainNodes);//find the paths between main busbars
 		connOnes= makeConnOnes(Terminals,Connections,Breakers,ACLines,powerTransformerEnds);//remake connOnes
@@ -275,7 +275,7 @@ public class BuildConnectionMatrix{
 	
 	///////////////////////////////////////////////////////////////////////////////
 	//				MAKE THE NODE CONNECTION Matrix
-	public static Complex[][] makeConnMatrix(ArrayList<Terminal> Terminals, ArrayList<ConnectivityNode> Connections, ArrayList<Breaker> Breakers, ArrayList<ACLine> ACLines, ArrayList<PowerTransformerEnd> powerTransformerEnds) {
+	public static Complex[][] makeConnMatrix(ArrayList<Terminal> Terminals, ArrayList<ConnectivityNode> Connections, ArrayList<Breaker> Breakers, ArrayList<ACLine> ACLines, ArrayList<PowerTransformerEnd> powerTransformerEnds, ArrayList<BaseVoltage> BaseVoltage) {
 		// cycle through connectivity nodes and find all terminals
 
 		//initialize matrix
@@ -302,7 +302,7 @@ public class BuildConnectionMatrix{
 								String id2=Connections.get(cc).rdfID.toString(); //       ********Second connectivityNode ii
 								if(id2.equals(connRdfID2)){
 									//nodes are connected
-									Complex[][] ynew = makeImpedanceArray(ACLines, powerTransformerEnds,condEq);//there is a connection between the nodes
+									Complex[][] ynew = makeImpedanceArray(ACLines, powerTransformerEnds,condEq, BaseVoltage);//there is a connection between the nodes
 									connMatrix[c][cc]=ynew[0][0].scale(-1);
 									
 									if(connMatrix[c][c]==null){
@@ -345,7 +345,8 @@ public class BuildConnectionMatrix{
 	
 ///////////////////////////////////////////////////////////////////////////////
 //               FIND THE IMPEDANCE/ADMITTANCE OF EACH CONNECTION
-	public static Complex[][] makeImpedanceArray(ArrayList<ACLine> ACLines, ArrayList<PowerTransformerEnd> powerTransformerEnds, String condEqRDF) {
+	public static Complex[][] makeImpedanceArray(ArrayList<ACLine> ACLines, ArrayList<PowerTransformerEnd> powerTransformerEnds, String condEqRDF, ArrayList<BaseVoltage> BaseVoltage) {
+		double basePower = 1000;//hard coded, could be added to GUI
 		
 		Complex Y=new Complex(0,0);
 		Complex yy=new Complex(0,0);
@@ -353,19 +354,27 @@ public class BuildConnectionMatrix{
 		//loop through ACLines
 		for(int a=0; a<ACLines.size(); a++){
 			String AC_RDF = ACLines.get(a).rdfID;
+			String AC_BV_RDF = ACLines.get(a).BV_rdfID;
 			double AC_r = ACLines.get(a).r;//resistance
 			double AC_x = ACLines.get(a).x;//reactance
 			double AC_g = ACLines.get(a).g /2   ; //line admittance
 			double AC_b = ACLines.get(a).b /2   ;
 			
-			
+			//find the base voltage
+			double ACbaseVoltage=1;
+			for(int bv=0; bv<BaseVoltage.size(); bv++){
+				if(AC_BV_RDF.equalsIgnoreCase(BaseVoltage.get(bv).rdfID)){
+					ACbaseVoltage = BaseVoltage.get(bv).nominalVal;
+				}
+			}
+			double ACbaseImpedance = ACbaseVoltage*ACbaseVoltage/basePower;
 			
 			
 			//Y=1/(r+jx)
 			if(AC_RDF.equals(condEqRDF)){
 				//Y = Y+1/(AC_r+i*AC_x); //if there is an ACLine, add it to the Y bus value
-				Complex Z_AC = new Complex(AC_r, AC_x);
-				Complex gb = new Complex(AC_g, AC_b);
+				Complex Z_AC = new Complex(AC_r/ACbaseImpedance, AC_x/ACbaseImpedance);
+				Complex gb = new Complex(AC_g*ACbaseImpedance, AC_b*ACbaseImpedance);
 				yy=yy.plus(gb);
 				Y=Y.plus(Z_AC.reciprocal());
 			}
@@ -376,14 +385,32 @@ public class BuildConnectionMatrix{
 		double xx=0;
 		double gg=0;
 		double bb=0;
+		double PTbaseImpedance=1;//just in case
 		for(int t=0; t<powerTransformerEnds.size(); t++){
 			//String PT_RDF = powerTransformerEnds.get(t).rdfID;
 			String PT_condEQ = powerTransformerEnds.get(t).transformer_rdf;
+			String PT_BV_RDF = powerTransformerEnds.get(t).baseVoltage_rdf;
 			double PT_r = powerTransformerEnds.get(t).r;//resistance
 			double PT_x = powerTransformerEnds.get(t).x;//reactance
 			double PT_g = powerTransformerEnds.get(t).g;//resistance
 			double PT_b = powerTransformerEnds.get(t).b;//reactance
+			
+			
 			if(PT_condEQ.equals(condEqRDF)){
+				//find the base voltage
+				if(PT_r!=0 && PT_x!=0){//correct side of transformer
+					
+					//find the base voltage
+					double PTbaseVoltage=1;
+					for(int bv=0; bv<BaseVoltage.size(); bv++){
+						if(PT_BV_RDF.equalsIgnoreCase(BaseVoltage.get(bv).rdfID)){
+							PTbaseVoltage = BaseVoltage.get(bv).nominalVal;
+						}
+					}
+					PTbaseImpedance = PTbaseVoltage*PTbaseVoltage/basePower;
+				}
+				
+				
 				rr = rr+PT_r;
 				xx = xx+PT_x;
 				gg = gg+PT_g;
@@ -393,8 +420,8 @@ public class BuildConnectionMatrix{
 		//if there was any transformer data, add it to the Y bus value
 		if(rr!=0 || xx!=0 || gg!=0 || bb!=0){//there was some transformer data
 			//Y=Y+1/(rr+i*xx);//admittance
-			Complex Z_PT = new Complex(rr,xx);
-			Complex ggbb = new Complex(gg,bb);
+			Complex Z_PT = new Complex(rr/PTbaseImpedance,xx/PTbaseImpedance);
+			Complex ggbb = new Complex(gg*PTbaseImpedance,bb*PTbaseImpedance);
 			Y=Y.plus(Z_PT.reciprocal());
 			yy=yy.plus(ggbb);
 		}

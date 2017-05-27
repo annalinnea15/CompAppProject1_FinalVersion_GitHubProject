@@ -107,7 +107,7 @@ public class ParsingTotal {
 		
 		//make matrices
 		BuildConnectionMatrix BuildMat = new BuildConnectionMatrix();
-		Complex[][] Ybus = BuildMat.makeYbus(TerminalArray, ConnectivityNodeArray, breakerArray, ACLineArray, powerTransformerEndArray);
+		Complex[][] Ybus = BuildMat.makeYbus(TerminalArray, ConnectivityNodeArray, breakerArray, ACLineArray, powerTransformerEndArray, baseVoltageArray);
 		return Ybus;
 		
 

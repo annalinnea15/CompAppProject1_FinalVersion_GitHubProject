@@ -186,7 +186,7 @@ public class ParseEQ {
 			Node node=line.item(i);
 			String[] cim=extractNode(node);
 			ACLineArray.add(new ACLine(cim[0], cim[1], Double.parseDouble(cim[15]), 
-					Double.parseDouble(cim[16]), Double.parseDouble(cim[23]), Double.parseDouble(cim[24])));
+					Double.parseDouble(cim[16]), Double.parseDouble(cim[23]), Double.parseDouble(cim[24]), cim[25]));
 		}
 		return ACLineArray;
 	}
@@ -246,6 +246,7 @@ public class ParseEQ {
 				String ACLine_x = extractTag(element,"cim:ACLineSegment.x",true,false);
 				String ACLine_g = extractTag(element,"cim:ACLineSegment.gch",true,false);
 				String ACLine_b = extractTag(element,"cim:ACLineSegment.bch",true,false);
+				String ACLine_BVrdf = extractTag(element,"cim:ConductingEquipment.BaseVoltage",false,true);
 				
 				String conNode_rdf = extractTag(element,"cim:Terminal.ConnectivityNode",false,true);
 				String condEq_rdf = extractTag(element,"cim:Terminal.ConductingEquipment",false,true);
@@ -254,7 +255,7 @@ public class ParseEQ {
 				//output as String[]
 				String[] attributeString={rdfID, name, nominalValue, region, sub_rdf, bv_rdf, maxP, minP, 
 						equipC, ratedS, genUnit_rdf, regCont_rdf, PT_r, PT_x, PT_rdf, ACLine_r, ACLine_x, 
-						conNode_rdf, condEq_rdf,description, PT_BVrdf, PT_g, PT_b, ACLine_g, ACLine_b};
+						conNode_rdf, condEq_rdf,description, PT_BVrdf, PT_g, PT_b, ACLine_g, ACLine_b, ACLine_BVrdf};
 				
 				//------------------------------GET FROM SSH FILE----------------------------------------//
 				//Breaker state in SSH file
