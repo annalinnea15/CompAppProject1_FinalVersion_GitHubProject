@@ -365,6 +365,7 @@ public class BuildConnectionMatrix{
 			for(int bv=0; bv<BaseVoltage.size(); bv++){
 				if(AC_BV_RDF.equalsIgnoreCase(BaseVoltage.get(bv).rdfID)){
 					ACbaseVoltage = BaseVoltage.get(bv).nominalVal;
+					break;
 				}
 			}
 			double ACbaseImpedance = ACbaseVoltage*ACbaseVoltage/basePower;
@@ -405,6 +406,7 @@ public class BuildConnectionMatrix{
 					for(int bv=0; bv<BaseVoltage.size(); bv++){
 						if(PT_BV_RDF.equalsIgnoreCase(BaseVoltage.get(bv).rdfID)){
 							PTbaseVoltage = BaseVoltage.get(bv).nominalVal;
+							break;
 						}
 					}
 					PTbaseImpedance = PTbaseVoltage*PTbaseVoltage/basePower;
